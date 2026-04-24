@@ -106,8 +106,13 @@ export async function POST(req: NextRequest) {
   }
 
   if (!bridgeResponse.ok) {
+    const bridgeErrorText = await bridgeResponse.text().catch(() => "");
     return NextResponse.json(
-      { error: `Bridge error: ${bridgeResponse.status}` },
+      {
+        error: `Bridge error: ${bridgeResponse.status}${
+          bridgeErrorText ? ` — ${bridgeErrorText.slice(0, 240)}` : ""
+        }`,
+      },
       { status: bridgeResponse.status }
     );
   }

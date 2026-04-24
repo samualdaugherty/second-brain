@@ -43,7 +43,16 @@ export function useChat() {
       });
 
       if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
+        let details = `HTTP ${res.status}`;
+        try {
+          const errBody = (await res.json()) as { error?: string };
+          if (errBody?.error) {
+            details = errBody.error;
+          }
+        } catch {
+          // Keep fallback details if body is not JSON.
+        }
+        throw new Error(details);
       }
 
       if (!res.body) {
@@ -126,6 +135,8 @@ export function useChat() {
         err instanceof TypeError && err.message.includes("fetch");
       const errorText = isNetworkError
         ? "Can't reach the Mac Mini right now. Make sure Tailscale is running."
+        : err instanceof Error && err.message
+        ? err.message
         : "Something went wrong. Try again.";
 
       setMessages((prev) =>
