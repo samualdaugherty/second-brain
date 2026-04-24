@@ -108,6 +108,11 @@ export function useChat() {
             }
 
             if (event.error) {
+                // The bridge may emit this warning before valid output.
+                // It is non-fatal and should not fail the whole chat request.
+                if (event.error.startsWith("Warning: no stdin data received")) {
+                  continue;
+                }
               throw new Error(event.error);
             }
 
