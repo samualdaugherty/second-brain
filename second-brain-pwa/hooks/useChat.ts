@@ -62,6 +62,26 @@ export function useChat() {
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let hasVisibleAssistantText = false;
+
+      const finalizeAssistantMessage = (status: "complete" | "error") => {
+        setMessages((prev) =>
+          prev.map((m) => {
+            if (m.id !== garyMessageId) return m;
+
+            if (!hasVisibleAssistantText) {
+              return {
+                ...m,
+                content:
+                  "Gary finished processing but returned no visible response. Try again, or split the request into smaller steps.",
+                status: "error",
+              };
+            }
+
+            return { ...m, status };
+          })
+        );
+      };
 
       while (true) {
         const { done, value } = await reader.read();
@@ -98,11 +118,7 @@ export function useChat() {
             }
 
             if (event.done) {
-              setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === garyMessageId ? { ...m, status: "complete" } : m
-                )
-              );
+              finalizeAssistantMessage("complete");
               setIsLoading(false);
               return;
             }
@@ -117,6 +133,7 @@ export function useChat() {
             }
 
             if (event.text) {
+              hasVisibleAssistantText = hasVisibleAssistantText || event.text.trim().length > 0;
               setMessages((prev) =>
                 prev.map((m) =>
                   m.id === garyMessageId
@@ -130,11 +147,7 @@ export function useChat() {
       }
 
       // Stream ended without a done event — mark complete anyway
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === garyMessageId ? { ...m, status: "complete" } : m
-        )
-      );
+      finalizeAssistantMessage("complete");
     } catch (err) {
       const isNetworkError =
         err instanceof TypeError && err.message.includes("fetch");
