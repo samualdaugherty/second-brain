@@ -7,6 +7,19 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 30;
 const ipRequestLog = new Map<string, number[]>();
 
+function parseAllowedOrigins(): string[] {
+  const list = process.env.ALLOWED_ORIGINS;
+  if (list) {
+    return list
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean);
+  }
+
+  const single = process.env.ALLOWED_ORIGIN;
+  return single ? [single] : [];
+}
+
 function getClientIp(req: NextRequest): string {
   const forwardedFor = req.headers.get("x-forwarded-for");
   if (forwardedFor) {
@@ -36,7 +49,7 @@ export async function POST(req: NextRequest) {
 
   const bridgeUrl = process.env.NEXT_PUBLIC_BRIDGE_URL;
   const apiKey = process.env.BRIDGE_API_KEY;
-  const allowedOrigin = process.env.ALLOWED_ORIGIN;
+  const allowedOrigins = parseAllowedOrigins();
 
   if (!bridgeUrl || !apiKey) {
     return NextResponse.json(
@@ -46,7 +59,7 @@ export async function POST(req: NextRequest) {
   }
 
   const origin = req.headers.get("origin");
-  if (allowedOrigin && origin && origin !== allowedOrigin) {
+  if (allowedOrigins.length > 0 && origin && !allowedOrigins.includes(origin)) {
     return NextResponse.json({ error: "Origin not allowed." }, { status: 403 });
   }
 
