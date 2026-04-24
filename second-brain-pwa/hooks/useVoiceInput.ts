@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useSyncExternalStore } from "react";
 
 // Extend window type for cross-browser Web Speech API
 declare global {
@@ -17,10 +17,12 @@ interface UseVoiceInputOptions {
 
 export function useVoiceInput({ onTranscript, onError }: UseVoiceInputOptions) {
   const [isRecording, setIsRecording] = useState(false);
-  const [isSupported] = useState<boolean>(() => {
-    if (typeof window === "undefined") return false;
-    return !!(window.SpeechRecognition || window.webkitSpeechRecognition);
-  });
+  const isSupported = useSyncExternalStore(
+    // Speech API support does not emit change events, so this is a no-op subscription.
+    () => () => {},
+    () => !!(window.SpeechRecognition || window.webkitSpeechRecognition),
+    () => false
+  );
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   const start = useCallback(() => {
