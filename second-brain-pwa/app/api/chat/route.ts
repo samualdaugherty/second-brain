@@ -71,9 +71,15 @@ export async function POST(req: NextRequest) {
   }
 
   let message: string;
+  let sessionId: string | undefined;
+  let history:
+    | Array<{ role: "user" | "gary"; content: string; timestamp?: string }>
+    | undefined;
   try {
     const body = await req.json();
     message = body.message;
+    sessionId = typeof body.sessionId === "string" ? body.sessionId : undefined;
+    history = Array.isArray(body.history) ? body.history : undefined;
     if (!message || typeof message !== "string") {
       return NextResponse.json({ error: "Invalid message." }, { status: 400 });
     }
@@ -95,7 +101,11 @@ export async function POST(req: NextRequest) {
         "Content-Type": "application/json",
         "x-api-key": apiKey,
       },
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({
+        message,
+        sessionId,
+        history,
+      }),
       signal: AbortSignal.timeout(45_000),
     });
   } catch {

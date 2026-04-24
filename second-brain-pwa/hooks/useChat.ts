@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { Message } from "@/lib/types";
+import { getOrCreateChatSessionId } from "@/lib/chatSession";
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -35,11 +36,50 @@ export function useChat() {
     setMessages((prev) => [...prev, userMessage, garyMessage]);
     setIsLoading(true);
 
+    const sessionId = getOrCreateChatSessionId();
+    const history = messages
+      .filter((m) => m.status !== "error")
+      .map((m) => ({
+        role: m.role,
+        content: m.content,
+        timestamp: m.timestamp.toISOString(),
+      }));
+
+    const controller = new AbortController();
+    const OVERALL_TIMEOUT_MS = 180_000;
+    const INACTIVITY_TIMEOUT_MS = 45_000;
+    let inactivityTimeout: ReturnType<typeof setTimeout> | null = null;
+    let overallTimeout: ReturnType<typeof setTimeout> | null = null;
+
+    const clearTimers = () => {
+      if (inactivityTimeout) clearTimeout(inactivityTimeout);
+      if (overallTimeout) clearTimeout(overallTimeout);
+      inactivityTimeout = null;
+      overallTimeout = null;
+    };
+
     try {
+
+      const resetInactivityTimer = () => {
+        if (inactivityTimeout) clearTimeout(inactivityTimeout);
+        inactivityTimeout = setTimeout(() => {
+          controller.abort("INACTIVITY_TIMEOUT");
+        }, INACTIVITY_TIMEOUT_MS);
+      };
+
+      overallTimeout = setTimeout(() => {
+        controller.abort("OVERALL_TIMEOUT");
+      }, OVERALL_TIMEOUT_MS);
+
       const res = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed }),
+        body: JSON.stringify({
+          message: trimmed,
+          sessionId,
+          history,
+        }),
+        signal: controller.signal,
       });
 
       if (!res.ok) {
@@ -63,8 +103,10 @@ export function useChat() {
       const decoder = new TextDecoder();
       let buffer = "";
       let hasVisibleAssistantText = false;
+      resetInactivityTimer();
 
       const finalizeAssistantMessage = (status: "complete" | "error") => {
+        clearTimers();
         setMessages((prev) =>
           prev.map((m) => {
             if (m.id !== garyMessageId) return m;
@@ -86,6 +128,7 @@ export function useChat() {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
+        resetInactivityTimer();
 
         buffer += decoder.decode(value, { stream: true });
 
@@ -124,11 +167,11 @@ export function useChat() {
             }
 
             if (event.error) {
-                // The bridge may emit this warning before valid output.
-                // It is non-fatal and should not fail the whole chat request.
-                if (event.error.startsWith("Warning: no stdin data received")) {
-                  continue;
-                }
+              // The bridge may emit this warning before valid output.
+              // It is non-fatal and should not fail the whole chat request.
+              if (event.error.startsWith("Warning: no stdin data received")) {
+                continue;
+              }
               throw new Error(event.error);
             }
 
@@ -151,8 +194,12 @@ export function useChat() {
     } catch (err) {
       const isNetworkError =
         err instanceof TypeError && err.message.includes("fetch");
+      const isTimeoutError =
+        err instanceof DOMException && err.name === "AbortError";
       const errorText = isNetworkError
         ? "Can't reach the Mac Mini right now. Make sure Tailscale is running."
+        : isTimeoutError
+        ? "Gary timed out waiting for that action to finish. Try splitting this into smaller steps (for example: save first, then reminder)."
         : err instanceof Error && err.message
         ? err.message
         : "Something went wrong. Try again.";
@@ -165,9 +212,10 @@ export function useChat() {
         )
       );
     } finally {
+      clearTimers();
       setIsLoading(false);
     }
-  }, [isLoading]);
+  }, [isLoading, messages]);
 
   return { messages, isLoading, sendMessage };
 }
