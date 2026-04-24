@@ -99,7 +99,7 @@ export function InputBar({ onSend, disabled = false }: InputBarProps) {
           placeholder={
             isRecording ? "Listening…" : disabled ? "Gary is thinking…" : "Ask Gary anything…"
           }
-          className="flex-1 resize-none rounded-2xl px-4 py-2 text-sm outline-none transition-colors disabled:opacity-60"
+          className="flex-1 resize-none rounded-2xl px-4 py-2 text-base sm:text-sm outline-none transition-colors disabled:opacity-60"
           style={{
             background: "var(--gary-surface)",
             color: "var(--gary-text)",
