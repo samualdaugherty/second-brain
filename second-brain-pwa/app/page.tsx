@@ -19,7 +19,10 @@ export default function Home() {
 
     async function checkHealth() {
       try {
-        const res = await fetch("/api/health");
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_BRIDGE_URL}/health`,
+          { headers: { "x-api-key": process.env.NEXT_PUBLIC_BRIDGE_API_KEY ?? "" } }
+        );
         if (cancelled) return;
         if (res.ok) {
           setConnectionStatus("online");
