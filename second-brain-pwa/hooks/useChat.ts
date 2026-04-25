@@ -47,7 +47,7 @@ export function useChat() {
 
     const controller = new AbortController();
     const OVERALL_TIMEOUT_MS = 180_000;
-    const INACTIVITY_TIMEOUT_MS = 45_000;
+    const INACTIVITY_TIMEOUT_MS = 90_000;
     let inactivityTimeout: ReturnType<typeof setTimeout> | null = null;
     let overallTimeout: ReturnType<typeof setTimeout> | null = null;
 
