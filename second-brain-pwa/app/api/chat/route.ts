@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 
 export const runtime = "nodejs";
+export const maxDuration = 180;
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX_REQUESTS = 30;
@@ -106,7 +107,7 @@ export async function POST(req: NextRequest) {
         sessionId,
         history,
       }),
-      signal: AbortSignal.timeout(45_000),
+      signal: AbortSignal.timeout(180_000),
     });
   } catch {
     return NextResponse.json(
