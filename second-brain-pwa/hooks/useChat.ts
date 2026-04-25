@@ -71,9 +71,15 @@ export function useChat() {
         controller.abort("OVERALL_TIMEOUT");
       }, OVERALL_TIMEOUT_MS);
 
-      const res = await fetch("/api/chat", {
+      const bridgeUrl = process.env.NEXT_PUBLIC_BRIDGE_URL;
+      const bridgeApiKey = process.env.NEXT_PUBLIC_BRIDGE_API_KEY;
+
+      const res = await fetch(`${bridgeUrl}/message`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": bridgeApiKey ?? "",
+        },
         body: JSON.stringify({
           message: trimmed,
           sessionId,
