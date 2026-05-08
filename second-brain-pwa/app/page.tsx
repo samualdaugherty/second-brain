@@ -77,7 +77,7 @@ export default function Home() {
         isSigningOut={isSigningOut}
       />
       <ChatThread messages={messagesWithOfflineNotice} />
-      <InputBar onSend={sendMessage} disabled={isLoading} />
+      <InputBar onSend={(msg, img) => sendMessage(msg, img)} disabled={isLoading} />
     </div>
   );
 }

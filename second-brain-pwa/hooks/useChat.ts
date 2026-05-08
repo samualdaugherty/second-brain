@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { Message } from "@/lib/types";
 import { getOrCreateChatSessionId } from "@/lib/chatSession";
+import type { AttachedImage } from "@/components/InputBar";
 
 function generateId(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -12,14 +13,14 @@ export function useChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const sendMessage = useCallback(async (content: string) => {
+  const sendMessage = useCallback(async (content: string, image?: AttachedImage) => {
     const trimmed = content.trim();
-    if (!trimmed || isLoading) return;
+    if ((!trimmed && !image) || isLoading) return;
 
     const userMessage: Message = {
       id: generateId(),
       role: "user",
-      content: trimmed,
+      content: trimmed + (image ? " 📷" : ""),
       timestamp: new Date(),
       status: "complete",
     };
@@ -84,6 +85,9 @@ export function useChat() {
           message: trimmed,
           sessionId,
           history,
+          ...(image && {
+            image: { base64: image.base64, mimeType: image.mimeType },
+          }),
         }),
         signal: controller.signal,
       });
